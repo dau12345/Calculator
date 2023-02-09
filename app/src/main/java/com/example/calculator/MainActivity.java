@@ -23,6 +23,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             btnZero, btnComma, btnEqual;
     int pressedBtnId = 0;
     boolean state = false;
+    boolean newSol = false;
 
     BigDecimal currentNum = new BigDecimal("0");
     BigDecimal tempNum = new BigDecimal("0");
@@ -79,6 +80,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             createState(btn);
             tempNum = currentNum;
             state = true;
+            newSol = false;
         }
     }
 
@@ -118,7 +120,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 pressAction(findViewById(R.id.btnPlus));
                 break;
             case "=":
-                if (pressedBtnId == 0){
+                if (pressedBtnId == 0) {
                     break;
                 }
                 Button pressedBtn = findViewById(pressedBtnId);
@@ -139,22 +141,28 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         break;
                 }
                 disposeState(pressedBtn);
+                newSol = true;
                 resultText = resultNum.stripTrailingZeros() + "";
                 break;
             case ".":
-                if (!resultText.contains(".")){
+                if (!resultText.contains(".")) {
                     resultText += btnText;
                 }
                 break;
             default:
-                if (resultText.length() < 2 && resultText.indexOf("0") == 0) {
+                if (newSol) {
                     resultText = btnText;
+                    newSol = false;
                 } else {
-                    if (state) {
+                    if (resultText.length() < 2 && resultText.indexOf("0") == 0) {
                         resultText = btnText;
-                        state = false;
                     } else {
-                        resultText += btnText;
+                        if (state) {
+                            resultText = btnText;
+                            state = false;
+                        } else {
+                            resultText += btnText;
+                        }
                     }
                 }
                 break;
