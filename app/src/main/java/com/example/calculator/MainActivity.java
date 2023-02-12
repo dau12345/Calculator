@@ -1,5 +1,6 @@
 package com.example.calculator;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.graphics.Color;
@@ -13,17 +14,29 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
-    TextView result;
+    TextView tvResult;
 
-    ArrayList<Button> buttons = new ArrayList<>();
     Button btnAC, btnPlus_or_Sub, btnPercent, btnDivide,
             btnSeven, btnEight, btnNine, btnMultiply,
             btnFour, btnFive, btnSix, btnSubtract,
             btnOne, btnTwo, btnThree, btnPlus,
             btnZero, btnComma, btnEqual;
+
+    String finalResult = "";
+
+    //pressedBtnId is used to store operation button's id which has been clicked
     int pressedBtnId = 0;
-    boolean state = false;
-    boolean newSol = false;
+
+    //clickState is set to "true" when a operation button has been clicked
+    boolean clickState = false;
+
+    //needCalcState is set to "true" when user have entered complete math problem
+    boolean needCalcState = false;
+
+    //newSol is set to "true" when the equal button has been clicked
+    boolean newSolState = false;
+
+    ArrayList<ArrayList> solList = new ArrayList<>();
 
     BigDecimal currentNum = new BigDecimal("0");
     BigDecimal tempNum = new BigDecimal("0");
@@ -34,7 +47,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        result = findViewById(R.id.result);
+        tvResult = findViewById(R.id.result);
         assignBtn(btnAC, R.id.btnAC);
         assignBtn(btnPlus_or_Sub, R.id.btnPlus_or_Sub);
         assignBtn(btnPercent, R.id.btnPercent);
@@ -56,56 +69,116 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         assignBtn(btnEqual, R.id.btnEqual);
     }
 
+    //Identify buttons and set onclick listener for those buttons
     void assignBtn(Button btn, int id) {
         btn = findViewById(id);
         btn.setOnClickListener(this);
     }
 
-    void createState(Button btn) {
+    //Change operation button's bg color and text color, also save the pressed button's id
+    void createState(@NonNull Button btn) {
         btn.setBackgroundColor(getColor(R.color.white));
         btn.setTextColor(Color.parseColor("#F39D3A"));
         pressedBtnId = btn.getId();
     }
 
-    void disposeState(Button btn) {
+    //Change operation button's bg color and text color back to default, also clear the pressed button's id
+    void disposeState(@NonNull Button btn) {
         btn.setBackgroundColor(Color.parseColor("#F39D3A"));
         btn.setTextColor(getColor(R.color.white));
         pressedBtnId = 0;
     }
 
     void pressAction(Button btn) {
-        if (pressedBtnId != 0) {
-            disposeState(findViewById(pressedBtnId));
-        } else {
-            createState(btn);
-            tempNum = currentNum;
-            state = true;
-            newSol = false;
+        //If user has entered complete math problem but not clicked equal button yet -> calc
+        if (needCalcState) {
+            calc();
+            needCalcState = false;
         }
+
+        //If pressed button's id is already existed -> dispose it
+        if (pressedBtnId != 0) {
+
+            disposeState(findViewById(pressedBtnId));
+        }
+
+        createState(btn);
+        tempNum = currentNum;
+        clickState = true;
+        newSolState = false;
+    }
+
+    void calc() {
+        //If user hasn't clicked any operation buttons yet -> break
+        if (pressedBtnId == 0) {
+            return;
+        }
+
+        Button pressedBtn = findViewById(pressedBtnId);
+        switch (pressedBtn.getText().toString()) {
+            case "/":
+                resultNum = tempNum.divide(currentNum);
+                break;
+            case "X":
+                resultNum = tempNum.multiply(currentNum);
+                break;
+            case "-":
+                resultNum = tempNum.subtract(currentNum);
+                break;
+            case "+":
+                resultNum = tempNum.add(currentNum);
+                break;
+            default:
+                break;
+        }
+
+        //Dispose the pressed operation button when calculated successfully
+        disposeState(pressedBtn);
+
+        //newSol is set to "true" to pronounce that program is ready for a new math problem
+        newSolState = true;
+
+        //Display the result on screen
+        finalResult = resultNum.stripTrailingZeros() + "";
+        if (finalResult.length() > 0) {
+            tvResult.setText(finalResult);
+        }
+
+        //Update the new currentNum
+        currentNum = new BigDecimal(finalResult);
+
+        //Save history
+
     }
 
     @Override
     public void onClick(View view) {
         Button btn = (Button) view;
         String btnText = btn.getText().toString();
-        String resultText = result.getText().toString();
+        String resultText = tvResult.getText().toString();
         currentNum = new BigDecimal(resultText);
 
         switch (btnText) {
             case "AC":
-                resultText = "0";
+                //If user has clicked any operation buttons -> dispose it
+                if (pressedBtnId != 0) {
+                    disposeState(findViewById(pressedBtnId));
+                }
+                needCalcState = false;
+                clickState = false;
+                newSolState = false;
+                finalResult = "0";
                 break;
             case "+/-":
-                if (state) {
-
-                } else {
+                //Program only permits users to change a positive number to negative or backwards if they haven't clicked any operation buttons yet
+                if (!clickState) {
                     currentNum = new BigDecimal("0").subtract(currentNum);
-                    resultText = currentNum.stripTrailingZeros() + "";
+                    finalResult = currentNum.stripTrailingZeros() + "";
                 }
                 break;
             case "%":
                 currentNum = currentNum.divide(new BigDecimal("100"));
-                resultText = currentNum.stripTrailingZeros() + "";
+                finalResult = currentNum.stripTrailingZeros() + "";
                 break;
             case "/":
                 pressAction(findViewById(R.id.btnDivide));
@@ -120,53 +193,33 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 pressAction(findViewById(R.id.btnPlus));
                 break;
             case "=":
-                if (pressedBtnId == 0) {
-                    break;
-                }
-                Button pressedBtn = findViewById(pressedBtnId);
-                switch (pressedBtn.getText().toString()) {
-                    case "/":
-                        resultNum = tempNum.divide(currentNum);
-                        break;
-                    case "X":
-                        resultNum = tempNum.multiply(currentNum);
-                        break;
-                    case "-":
-                        resultNum = tempNum.subtract(currentNum);
-                        break;
-                    case "+":
-                        resultNum = tempNum.add(currentNum);
-                        break;
-                    default:
-                        break;
-                }
-                disposeState(pressedBtn);
-                newSol = true;
-                resultText = resultNum.stripTrailingZeros() + "";
+                calc();
                 break;
             case ".":
                 if (!resultText.contains(".")) {
-                    resultText += btnText;
+                    finalResult += btnText;
                 }
                 break;
             default:
-                if (newSol) {
-                    resultText = btnText;
-                    newSol = false;
+                //If program is ready for new solution
+                if (newSolState) {
+                    finalResult = btnText;
+                    newSolState = false;
                 } else {
                     if (resultText.length() < 2 && resultText.indexOf("0") == 0) {
-                        resultText = btnText;
+                        finalResult = btnText;
                     } else {
-                        if (state) {
-                            resultText = btnText;
-                            state = false;
+                        if (clickState) {
+                            finalResult = btnText;
+                            clickState = false;
+                            needCalcState = true;
                         } else {
-                            resultText += btnText;
+                            finalResult += btnText;
                         }
                     }
                 }
                 break;
         }
-        result.setText(resultText);
+        tvResult.setText(finalResult);
     }
 }
